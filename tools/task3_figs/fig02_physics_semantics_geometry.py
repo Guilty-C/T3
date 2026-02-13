@@ -2,6 +2,7 @@ import argparse
 import os
 import glob
 import re
+import math
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -247,67 +248,54 @@ def fig02A_optional_B_bands(data_all, out_path, bins_snr=25, n_bands=3):
     plt.savefig(os.path.join(out_path, "fig02A_snr_per_bands.png"), dpi=200)
     plt.close()
     
-    # --- Audit Logic ---
+    # --- Audit Logic (same SNR window and same gap definition) ---
+    tol = 1e-6
     max_gap = 0.0
-    curves_identical = False
-    
-    # Check SNR range 2-20
-    # Find indices where global_centers is in [2, 20]
+    max_gap_swer = 0.0
+    max_gap_per = 0.0
+    n_bins_compared = 0
+    per_bin_gap = []
     relevant_indices = np.where((global_centers >= 2.0) & (global_centers <= 20.0))[0]
-    
-    if len(relevant_indices) > 0:
-        # Check PER or sWER gaps
-        # Let's check sWER first
-        gaps_swer = []
-        gaps_per = []
-        
-        # We need to compare band 0, 1, 2
-        # Max gap at each SNR point among all pairs of bands
-        for idx in relevant_indices:
-            vals_swer = [band_means_swer[b][idx] for b in range(n_bands)]
-            vals_per = [band_means_per[b][idx] for b in range(n_bands)]
-            
-            # Filter NaNs
-            v_swer = [v for v in vals_swer if np.isfinite(v)]
-            v_per = [v for v in vals_per if np.isfinite(v)]
-            
-            if len(v_swer) > 1:
-                gaps_swer.append(max(v_swer) - min(v_swer))
-            if len(v_per) > 1:
-                gaps_per.append(max(v_per) - min(v_per))
-                
-        max_gap_swer = max(gaps_swer) if gaps_swer else 0.0
-        max_gap_per = max(gaps_per) if gaps_per else 0.0
-        max_gap = max(max_gap_swer, max_gap_per)
-    
-    # Check for identical curves (across all bins, not just 2-20)
-    # Check if Band 0 is identical to Band 1, etc.
-    # We'll set curves_identical = True if ANY pair is identical (or all?)
-    # Requirement: "check if three bands at same SNR are completely identical"
-    # If they are, it's a fail.
-    
-    is_identical = True
-    # Compare band 0 with others
-    base_swer = band_means_swer[0]
-    for i in range(1, n_bands):
-        # We use allclose with small tolerance
-        # Handle NaNs: identical if both NaN
-        mask = np.isfinite(base_swer) & np.isfinite(band_means_swer[i])
-        if np.any(mask):
-            if not np.allclose(base_swer[mask], band_means_swer[i][mask], atol=1e-6):
-                is_identical = False
-                break
-        else:
-            # If completely different NaN patterns, might be different, but if all NaNs...
-            # Assume if we have some data and it matches, it's identical.
-            pass
-            
-    curves_identical = is_identical
+
+    for idx in relevant_indices:
+        vals_swer = [band_means_swer[b][idx] for b in range(n_bands)]
+        vals_per = [band_means_per[b][idx] for b in range(n_bands)]
+        v_swer = [v for v in vals_swer if np.isfinite(v)]
+        v_per = [v for v in vals_per if np.isfinite(v)]
+        gap_swer = (max(v_swer) - min(v_swer)) if len(v_swer) >= 2 else np.nan
+        gap_per = (max(v_per) - min(v_per)) if len(v_per) >= 2 else np.nan
+
+        if np.isfinite(gap_swer):
+            max_gap_swer = max(max_gap_swer, float(gap_swer))
+        if np.isfinite(gap_per):
+            max_gap_per = max(max_gap_per, float(gap_per))
+
+        gap_candidates = [g for g in [gap_swer, gap_per] if np.isfinite(g)]
+        if gap_candidates:
+            bin_gap = float(max(gap_candidates))
+            per_bin_gap.append(bin_gap)
+            n_bins_compared += 1
+            max_gap = max(max_gap, bin_gap)
+
+    if n_bins_compared < 5:
+        curves_identical = False
+        identical_reason = "too_few_bins"
+    elif any(g > tol for g in per_bin_gap):
+        curves_identical = False
+        identical_reason = "gap_detected"
+    else:
+        curves_identical = True
+        identical_reason = "all_bins_within_tol"
 
     return {
         "ok": True,
         "max_gap": float(max_gap),
-        "curves_identical": curves_identical
+        "max_gap_swer": float(max_gap_swer),
+        "max_gap_per": float(max_gap_per),
+        "curves_identical": curves_identical,
+        "n_bins_compared": int(n_bins_compared),
+        "identical_reason": identical_reason,
+        "tol": tol,
     }
 
 def freq_heatmap_for_algo(data_algo, out_path_base, out_dir, algo_name, window_frac=0.2):
@@ -507,16 +495,19 @@ def fig02C_semantic_constraint(data_all, out_path, semantic_col, bins_qsem=6, wi
             start = int((1.0 - window_frac) * len(df))
             d_win = df.iloc[start:]
             if "swer" in d_win.columns and u_col in d_win.columns:
-                chunk_size = len(d_win) // n_chunks
-                if chunk_size < 1: chunk_size = len(d_win)
-                
-                for i in range(0, len(d_win), chunk_size):
+                if len(d_win) == 0:
+                    continue
+                effective_chunks = max(2, int(n_chunks))
+                chunk_size = int(math.ceil(len(d_win) / float(effective_chunks)))
+                chunk_size = max(1, chunk_size)
+
+                for chunk_id, i in enumerate(range(0, len(d_win), chunk_size)):
                     sub = d_win.iloc[i : i+chunk_size]
                     if sub.empty: continue
                     m_swer = float(np.nanmean(sub["swer"].values))
                     m_u = float(np.nanmean(sub[u_col].values))
                     if np.isfinite(m_swer) and np.isfinite(m_u):
-                        algo_points.append({"algo": algo, "swer": m_swer, "U": m_u})
+                        algo_points.append({"algo": algo, "seed": int(seed), "chunk_id": int(chunk_id), "swer": m_swer, "U": m_u})
 
     # Domination Logic
     # b dominates a if b.x <= a.x AND b.y >= a.y (at least one strict)
@@ -546,6 +537,29 @@ def fig02C_semantic_constraint(data_all, out_path, semantic_col, bins_qsem=6, wi
             
     # Sort by sWER ascending for plotting line
     nondominated.sort(key=lambda p: p["swer"])
+
+    # explicit per-point certificate
+    frontier_checks = []
+    for i, a in enumerate(nondominated):
+        dominated_by = None
+        for j, b in enumerate(algo_points):
+            if a is b:
+                continue
+            better_eq_swer = b["swer"] <= a["swer"]
+            better_eq_u = b["U"] >= a["U"]
+            strict_swer = b["swer"] < a["swer"]
+            strict_u = b["U"] > a["U"]
+            if better_eq_swer and better_eq_u and (strict_swer or strict_u):
+                dominated_by = {"algo": b["algo"], "seed": b.get("seed"), "chunk_id": b.get("chunk_id")}
+                break
+        frontier_checks.append({
+            "idx": i,
+            "algo": a.get("algo"),
+            "seed": a.get("seed"),
+            "chunk_id": a.get("chunk_id"),
+            "pass": dominated_by is None,
+            "dominated_by": dominated_by
+        })
     
     # Plotting
     plt.figure(figsize=(6,4))
@@ -582,8 +596,10 @@ def fig02C_semantic_constraint(data_all, out_path, semantic_col, bins_qsem=6, wi
     # Already done by definition, but we'll report count
     return {
         "ok": True,
+        "points_total": len(algo_points),
         "nondominated_count": len(nondominated),
-        "frontier_points": nondominated
+        "frontier_points": nondominated,
+        "frontier_checks": frontier_checks,
     }
 
 def generate_audit_report(args, resA, resB, resC):
@@ -591,12 +607,12 @@ def generate_audit_report(args, resA, resB, resC):
     # 1. Header (Acceptance Score Standard)
     lines.append("置顶：验收打分标准（必须输出到报告首行）")
     lines.append("Score=10 的条件：")
-    lines.append("python -m compileall -q <涉及脚本> exit 0")
+    lines.append("python -m compileall -q task3/fig02_physics_semantics_geometry.py exit 0")
     lines.append("只做“修改 + 生成 Fig02 审计报告”， 不要跑大规模训练/长实验 （除非已有 CSV）")
     lines.append("审计报告 fig02_audit.md 满足：")
     lines.append("Heatmap mass concentration：最大单元格占比 < 0.60 ；Top-2 合计 < 0.85")
     lines.append("Heatmap entropy（按概率分布计算） > 1.0 （阈值可调，但必须不是接近 0）")
-    lines.append("Band curves：PER 或 sWER 三条 band 在 SNR=2~20 的区间内 max_gap > 0.02 （否则判定 band 无效）")
+    lines.append("Band curves：PER 或 sWER 三条 band 在 SNR=2~20 的区间内 max_gap > 0.02，且 curves_identical 不得与 max_gap 逻辑矛盾（必须输出 n_bins_compared，>=5 才允许 identical=True）")
     lines.append("Pareto：输出 nondominated 点数 > 3，且每个前沿点都通过“未被支配”检查")
     lines.append("重新生成的 Fig02B 不允许“全黑 + 单点亮”；必须能看出“可行域内形成高密区”的结构趋势【 】")
     lines.append("最后输出 ACCEPTANCE_JSON=... （包含上述指标与 PASS/FAIL）")
@@ -608,34 +624,36 @@ def generate_audit_report(args, resA, resB, resC):
     
     # 2. Heatmap Audit (Fig02B)
     lines.append("## Fig02B: Heatmap Audit")
-    # We check raucb_plus primarily as it's the main RL algo, or check all?
-    # Requirement says "Per algorithm heatmap..."
-    # Let's check raucb_plus specifically if available, or fail if not.
-    
-    target_algo = "raucb_plus"
-    if target_algo in resB:
-        rb = resB[target_algo]
+    heatmap_metrics = {}
+    required_zoom = set(args.algos_zoom)
+    for target_algo in sorted(required_zoom):
+        rb = resB.get(target_algo)
+        if not rb or not rb.get("ok"):
+            lines.append(f"### Algorithm: {target_algo}")
+            lines.append("- Result: FAIL (missing or invalid heatmap data)")
+            pass_all = False
+            continue
         lines.append(f"### Algorithm: {target_algo}")
         lines.append(f"- Max Cell Share: {rb['max_cell_share']:.4f} (Limit: < 0.60)")
         lines.append(f"- Top-2 Share: {rb['top2_share']:.4f} (Limit: < 0.85)")
         lines.append(f"- Entropy: {rb['entropy']:.4f} (Limit: > 1.0)")
-        
+        lines.append(f"- Nonzero Cells: {rb['nonzero_cells']}")
         cond1 = rb['max_cell_share'] < 0.60
         cond2 = rb['top2_share'] < 0.85
         cond3 = rb['entropy'] > 1.0
-        
-        if not (cond1 and cond2 and cond3):
+        cond4 = rb['nonzero_cells'] > 1
+        algo_pass = cond1 and cond2 and cond3 and cond4
+        lines.append(f"**Result: {'PASS' if algo_pass else 'FAIL'}**")
+        if not algo_pass:
             pass_all = False
-            lines.append("**Result: FAIL**")
-        else:
-            lines.append("**Result: PASS**")
-            
-        json_metrics["heatmap_max_cell"] = rb['max_cell_share']
-        json_metrics["heatmap_top2"] = rb['top2_share']
-        json_metrics["heatmap_entropy"] = rb['entropy']
-    else:
-        lines.append(f"MISSING {target_algo} data for heatmap audit.")
-        pass_all = False
+        heatmap_metrics[target_algo] = {
+            "max_cell_share": rb['max_cell_share'],
+            "top2_share": rb['top2_share'],
+            "entropy": rb['entropy'],
+            "nonzero_cells": rb['nonzero_cells'],
+            "pass": algo_pass,
+        }
+    json_metrics["heatmap_by_algo"] = heatmap_metrics
         
     # 3. Band Curves Audit (Fig02A)
     lines.append("")
@@ -643,14 +661,20 @@ def generate_audit_report(args, resA, resB, resC):
     if resA.get("ok"):
         max_gap = resA.get("max_gap", 0.0)
         identical = resA.get("curves_identical", False)
+        n_bins_compared = int(resA.get("n_bins_compared", 0))
+        identical_reason = resA.get("identical_reason", "unknown")
         
         lines.append(f"- Max Gap (SNR 2-20): {max_gap:.4f} (Limit: > 0.02)")
         lines.append(f"- Curves Identical: {identical} (Limit: False)")
+        lines.append(f"- n_bins_compared: {n_bins_compared} (Constraint: >=5 only then identical may be True)")
+        lines.append(f"- identical_reason: {identical_reason}")
         
         cond_band1 = max_gap > 0.02
         cond_band2 = not identical
+        cond_band3 = (n_bins_compared >= 5) or (not identical)
+        cond_band4 = not (identical and max_gap > resA.get("tol", 1e-6))
         
-        if not (cond_band1 and cond_band2):
+        if not (cond_band1 and cond_band2 and cond_band3 and cond_band4):
             pass_all = False
             lines.append("**Result: FAIL**")
         else:
@@ -658,6 +682,8 @@ def generate_audit_report(args, resA, resB, resC):
             
         json_metrics["band_max_gap"] = max_gap
         json_metrics["band_identical"] = identical
+        json_metrics["band_n_bins_compared"] = n_bins_compared
+        json_metrics["band_identical_reason"] = identical_reason
     else:
         lines.append("Fig02A generation failed.")
         pass_all = False
@@ -667,16 +693,30 @@ def generate_audit_report(args, resA, resB, resC):
     lines.append("## Fig02C: Pareto Audit")
     if resC.get("ok"):
         cnt = resC.get("nondominated_count", 0)
+        pts = resC.get("points_total", 0)
+        checks = resC.get("frontier_checks", [])
         lines.append(f"- Non-dominated Points: {cnt} (Limit: > 3)")
+        lines.append(f"- Total candidate points: {pts}")
+
+        check_pass = True
+        lines.append("- Frontier point-by-point non-domination checks:")
+        for c in checks:
+            ok = bool(c.get("pass", False))
+            check_pass = check_pass and ok
+            lines.append(
+                f"  - idx={c['idx']} algo={c['algo']} seed={c['seed']} chunk_id={c['chunk_id']} => {'PASS' if ok else 'FAIL'}"
+            )
         
         cond_pareto = cnt > 3
-        if not cond_pareto:
+        if not (cond_pareto and check_pass):
             pass_all = False
             lines.append("**Result: FAIL**")
         else:
             lines.append("**Result: PASS**")
             
         json_metrics["pareto_points"] = cnt
+        json_metrics["pareto_points_total"] = pts
+        json_metrics["pareto_frontier_checks_pass"] = check_pass
     else:
         lines.append("Fig02C generation failed.")
         pass_all = False
