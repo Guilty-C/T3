@@ -1,0 +1,2 @@
+raucb_plus: ridge_density=0.08452281356586616, entropy=3.597318861244522, top5pct_mass=0.9999999999999964
+safe_linucb: ridge_density=0.0, entropy=-0.0, top5pct_mass=0.0

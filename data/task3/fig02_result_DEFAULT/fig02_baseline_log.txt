@@ -1,0 +1,8 @@
+Scenario: default
+(P,B) grid: bounds=[0.1,1.0], n_grid=[50]
+window_frac=0.2, window_start_step=8000
+semantic_column_used=semantic_weight
+s_t distribution: dynamic RW channel / queue evolution; q_semantic/q_energy queues (from CSV columns)
+Horizon: 10000, seeds=[0]
+Algorithms: ['lagrangian_ppo', 'lyapunov_greedy_oracle', 'raucb_plus', 'safe_linucb', 'safeopt_gp', 'sw_ucb']
+oracle_present=['lyapunov_greedy_oracle']

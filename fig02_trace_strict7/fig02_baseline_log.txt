@@ -1,0 +1,7 @@
+Scenario: bandit_dynamic_10000
+(P,B) grid: bounds=[0.1,1.0], n_grid=[50]
+window_frac=0.2, window_start_step=8000
+semantic_column_used=q_semantic
+s_t distribution: dynamic RW channel; q_semantic/q_energy queues (from CSV columns)
+Horizon: 10000, seeds=[0, 1, 2]
+Algorithms: ['best_fixed_arm_oracle', 'lagrangian_ppo', 'raucb_plus', 'safe_linucb', 'safeopt_gp', 'sw_ucb']

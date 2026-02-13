@@ -1,0 +1,44 @@
+
+--- Audit: raucb_plus ---
+window_start=8000, window_len=2000
+n_total_raw=2000
+n_finite=2000
+n_inrange=2000
+n_idx_out_of_range=0
+hist_sum_raw=2000.0
+nonzero_cells=143
+support_frac=0.057200
+P_index: min=0, max=49, unique=25
+B_index: min=0, max=49, unique=20
+Mapped P: min=0.1, max=1.0
+Mapped B: min=0.1, max=1.0
+NOTE: value clamp is only for float precision; indices outside [0,g-1] are counted in n_idx_out_of_range and mapped to NaN.
+hist_sum_norm=1.000000
+Heatmap Axes: P=[20.0, 33.0] dBm, B=[5.0, 20.0] kHz
+Mapping Formula: P_dBm = 20.0 + (P_norm - 0.1) * (33.0-20.0)/(1.0-0.1)
+Mapping Formula: B_kHz = 5.0 + (B_norm - 0.1) * (20.0-5.0)/(1.0-0.1)
+Judgment: Normal distribution
+
+--- Audit: safe_linucb ---
+window_start=8000, window_len=2000
+n_total_raw=2000
+n_finite=2000
+n_inrange=2000
+n_idx_out_of_range=0
+hist_sum_raw=2000.0
+nonzero_cells=1
+support_frac=0.000400
+P_index: min=49, max=49, unique=1
+B_index: min=0, max=0, unique=1
+Mapped P: min=1.0, max=1.0
+Mapped B: min=0.1, max=0.1
+NOTE: value clamp is only for float precision; indices outside [0,g-1] are counted in n_idx_out_of_range and mapped to NaN.
+hist_sum_norm=1.000000
+Heatmap Axes: P=[20.0, 33.0] dBm, B=[5.0, 20.0] kHz
+Mapping Formula: P_dBm = 20.0 + (P_norm - 0.1) * (33.0-20.0)/(1.0-0.1)
+Mapping Formula: B_kHz = 5.0 + (B_norm - 0.1) * (20.0-5.0)/(1.0-0.1)
+Judgment: Sparse due to focused policy
+
+=== Summary ===
+raucb_plus: ridge_density=0.34599999999999986, entropy=2.5360102696889775, top5pct_mass=0.9909999999999995, effective_support=5.892474132003845, n_total_raw=2000, n_finite_total=2000, n_inrange_total=2000, n_idx_out_of_range=0, nonzero_cells=143, support_frac=0.0572
+safe_linucb: ridge_density=0.9999999999999996, entropy=-9.99644811371991e-13, top5pct_mass=0.9999999999999996, effective_support=0.9999999999990008, n_total_raw=2000, n_finite_total=2000, n_inrange_total=2000, n_idx_out_of_range=0, nonzero_cells=1, support_frac=0.0004
