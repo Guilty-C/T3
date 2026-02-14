@@ -41,7 +41,9 @@ class SWUCB(AlgorithmBase):
         del obs
         counts, means = self._stats()
         n = max(len(self._window), 1)
-        bonuses = np.sqrt(self.alpha * np.log(n + 1.0) / np.maximum(counts, 1.0))
+        bonuses = np.sqrt(
+            self.alpha * np.log(n + 1.0) / np.maximum(counts, 1.0)
+        )
         ucb = means + bonuses
         for i, c in enumerate(counts):
             if c == 0:

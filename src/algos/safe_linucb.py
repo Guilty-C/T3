@@ -65,8 +65,10 @@ class SafeLinUCB(AlgorithmBase):
             fallback.append((lcb_safe_margin, action))
 
         if safe_candidates:
-            return max(safe_candidates, key=lambda x: x[0])[1]
-        return max(fallback, key=lambda x: x[0])[1]
+            best = max(safe_candidates, key=lambda x: x[0])
+            return best[1]
+        best = max(fallback, key=lambda x: x[0])
+        return best[1]
 
     def update(self, transition: Transition) -> None:
         """Update both linear models with observed reward and cost."""

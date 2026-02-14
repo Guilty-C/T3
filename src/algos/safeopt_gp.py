@@ -67,7 +67,9 @@ class SafeOptGP(AlgorithmBase):
         mu_r, std_r = self._gp_predict(np.array(self._y_reward, dtype=float), Xs)
         mu_c, std_c = self._gp_predict(np.array(self._y_cost, dtype=float), Xs)
 
-        lcb_safe = self.safety_threshold - (mu_c + self.beta * std_c)
+        lcb_safe = self.safety_threshold - (
+            mu_c + self.beta * std_c
+        )
         safe_idx = [i for i, v in enumerate(lcb_safe) if v >= 0.0]
 
         if not safe_idx:
