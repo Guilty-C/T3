@@ -1,2 +1,0 @@
-raucb_plus: ridge_density=0.173, entropy=3.1166276242475397, top5pct_mass=0.9973333333333332, effective_support=14.299332697602967, n_valid_total=6000, nonzero_cells=141, support_frac=0.0564
-safe_linucb: ridge_density=0.34083333333333327, entropy=3.1699619900929985, top5pct_mass=0.9999999999999998, effective_support=7.948356875861651, n_valid_total=6000, nonzero_cells=49, support_frac=0.0196

@@ -1,9 +1,0 @@
-semantic_column_used=q_semantic
-algo_level_frontier_points=1
-frontier_algos=['safe_linucb']
-NOTE: Frontier degenerated to 1 point. This implies one algorithm dominates all others (or oracle dominates).
-Dominance Explanation: safe_linucb has mean_swer=0.0081 (lowest) AND mean_mos=4.9594 (highest) among all candidates in this window.
-
-Caption-A: Physical Consistency check passed (monotonic SNR-sWER relationship). The sWER decreases as SNR increases, confirming the channel model behavior. (bins_snr=25, environment-level binning, ensemble-average across algorithms x seeds; see fig02_physics_log.txt: monotonic=True, viol_points=[])
-Caption-B: Selection density analysis (window_frac=0.2, window_start_step=8000). RA-UCB++ geometry metrics: ridge_density=0.173, entropy=3.117, top5pct_mass=0.997, effective_support=14.299, support_frac=0.056, n_inrange_total=6000.
-Caption-C: Algorithm-level Pareto analysis (x=mean_sWER, y=mean_MOS) using q_semantic (proxy for semantic load). algo_level_frontier_points=1, frontier_algos=['safe_linucb']. Conclusion: safe_linucb has mean_swer=0.0081 (lowest) AND mean_mos=4.9594 (highest) among all candidates in this window.

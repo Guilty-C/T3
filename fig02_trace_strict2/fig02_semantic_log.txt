@@ -1,7 +1,0 @@
-semantic_column_used=q_semantic
-hi_q_semantic_mos=3.57696846798519
-lo_q_semantic_mos=3.552612712604034
-smooth_gain_avg=3.558701651449323
-frontier_points_raw=1
-frontier_points_unique=1
-frontier_total_variation=0.0
