@@ -122,7 +122,11 @@ class LagrangianPPO(AlgorithmBase):
         returns = np.array(returns[::-1], dtype=np.float32)
 
         obs = torch.as_tensor(np.stack([x.obs_vec for x in self._rollout]), dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor(np.stack([x.action_vec for x in self._rollout]), dtype=torch.float32, device=self.device)
+        actions = torch.as_tensor(
+            np.stack([x.action_vec for x in self._rollout]),
+            dtype=torch.float32,
+            device=self.device,
+        )
         old_logp = torch.as_tensor(np.array([x.logp for x in self._rollout]), dtype=torch.float32, device=self.device)
         old_values = torch.as_tensor(np.array([x.value for x in self._rollout]), dtype=torch.float32, device=self.device)
         ret = torch.as_tensor(returns, dtype=torch.float32, device=self.device)
