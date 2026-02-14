@@ -70,6 +70,7 @@ class RAUCBPP(AlgorithmBase):
         for idx in active_list:
             if counts[idx] == 0:
                 return self.actions[idx]
+
         best_idx = max(active_list, key=lambda i: ucb[i])
         return self.actions[best_idx]
 
