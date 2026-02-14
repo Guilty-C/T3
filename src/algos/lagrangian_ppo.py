@@ -16,6 +16,8 @@ from src.types import Action, Obs, Transition
 
 @dataclass
 class _RolloutItem:
+    """One transition item stored for PPO updates."""
+
     obs_vec: np.ndarray
     action_vec: np.ndarray
     reward: float
@@ -29,7 +31,12 @@ class _ActorCritic(nn.Module):
 
     def __init__(self, obs_dim: int, act_dim: int) -> None:
         super().__init__()
-        self.backbone = nn.Sequential(nn.Linear(obs_dim, 32), nn.Tanh(), nn.Linear(32, 32), nn.Tanh())
+        self.backbone = nn.Sequential(
+            nn.Linear(obs_dim, 32),
+            nn.Tanh(),
+            nn.Linear(32, 32),
+            nn.Tanh(),
+        )
         self.mu_head = nn.Linear(32, act_dim)
         self.log_std = nn.Parameter(torch.zeros(act_dim))
         self.v_head = nn.Linear(32, 1)
@@ -122,7 +129,11 @@ class LagrangianPPO(AlgorithmBase):
         returns = np.array(returns[::-1], dtype=np.float32)
 
         obs = torch.as_tensor(np.stack([x.obs_vec for x in self._rollout]), dtype=torch.float32, device=self.device)
-        actions = torch.as_tensor(np.stack([x.action_vec for x in self._rollout]), dtype=torch.float32, device=self.device)
+        actions = torch.as_tensor(
+            np.stack([x.action_vec for x in self._rollout]),
+            dtype=torch.float32,
+            device=self.device,
+        )
         old_logp = torch.as_tensor(np.array([x.logp for x in self._rollout]), dtype=torch.float32, device=self.device)
         old_values = torch.as_tensor(np.array([x.value for x in self._rollout]), dtype=torch.float32, device=self.device)
         ret = torch.as_tensor(returns, dtype=torch.float32, device=self.device)

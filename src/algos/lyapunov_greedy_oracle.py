@@ -13,7 +13,9 @@ class LyapunovGreedyOracle(AlgorithmBase):
 
     def __init__(self, config: Dict[str, Any]) -> None:
         self.actions: List[Action] = config["actions"]
-        self.oracle_predict: Callable[[Obs, Action], tuple[float, float]] = config["oracle_predict"]
+        self.oracle_predict: Callable[[Obs, Action], tuple[float, float]] = (
+            config["oracle_predict"]
+        )
         self.safety_threshold_fn: Callable[[Obs], float] = config["safety_threshold_fn"]
         self.penalty: float = float(config.get("penalty", 2.0))
 
