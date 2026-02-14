@@ -80,7 +80,9 @@ class RAUCBPP(AlgorithmBase):
         self._history.append((idx, transition.reward))
         counts, means = self._stats()
         n = max(len(self._window_records()), 1)
-        bonus = np.sqrt(self.alpha * np.log(n + 1.0) / np.maximum(counts, 1.0))
+        bonus = np.sqrt(
+            self.alpha * np.log(n + 1.0) / np.maximum(counts, 1.0)
+        )
         lcb = means - bonus
         ucb = means + bonus
 
